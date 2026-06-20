@@ -1,0 +1,29 @@
+# FSDB text export (event list) — scenario "TB-side root cause"
+# AOUT is cleanly driven (one-hot selects); there is NO contention / X.
+# A glitch checker still fires (see uvm.log) — a sim-artifact, not a real glitch.
+0      tb.clk                 St0
+0      tb.rst_n               St0
+0      tb.chan               St0   2'b00
+0      tb.dut.u_ctrl.sel0     Stx
+0      tb.dut.u_ctrl.sel1     Stx
+0      tb.dut.u_mux.IN0       St0
+0      tb.dut.u_mux.IN1       St1
+0      tb.dut.u_mux.AOUT      HiZ
+5      tb.clk                 St1
+10     tb.clk                 St0
+15     tb.rst_n               St1
+15     tb.clk                 St1
+# correct one-hot: only sel0 high for chan=0
+20     tb.dut.u_ctrl.sel0     St1
+20     tb.dut.u_ctrl.sel1     St0
+25     tb.clk                 St0
+30     tb.dut.u_mux.AOUT      St0
+35     tb.clk                 St1
+40     tb.chan               St1   2'b01
+45     tb.clk                 St0
+# switch channel cleanly: sel0 low before sel1 high
+55     tb.dut.u_ctrl.sel0     St0
+55     tb.clk                 St1
+60     tb.dut.u_ctrl.sel1     St1
+65     tb.dut.u_mux.AOUT      St1
+65     tb.clk                 St0

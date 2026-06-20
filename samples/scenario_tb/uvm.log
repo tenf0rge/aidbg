@@ -1,0 +1,6 @@
+UVM_INFO @ 0: reporter [RNTST] Running test tb_mux_test...
+Assertion tb.dut.u_chk.chk_aout_no_glitch FAILED at time 37 NS.
+UVM_ERROR ./tb/agent/mux_driver.sv(58) @ 36 ns: uvm_test_top.env.agent.drv [SYNC] stimulus driven 0-delay relative to sampling edge
+UVM_WARNING ./tb/env/mux_monitor.sv(16) @ 37 ns: uvm_test_top.env.mon [SAMPLE] transient seen on AOUT at sampling point
+UVM_ERROR ./tb/seq/mux_seq.sv(14) @ 80 ns: uvm_test_top.env.agent.seqr [NOITEM] response fifo empty
+UVM_INFO @ 120 ns: reporter [TEST_DONE] 2 UVM_ERROR
