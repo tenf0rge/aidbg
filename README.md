@@ -1,53 +1,75 @@
 # aidbg
 
-AI debug assistant for mixed-signal SoC verification.
+Autonomous debug assistant for mixed-signal SoC verification.
 
-Targets designs where the control path is RTL (Verilog/SystemVerilog) and the
+Targets designs where the control path is RTL (SystemVerilog) and the
 functional path is analog, brought in as a schematic-extracted netlist
-(library cells, pass gates modeled with `tranif`). It correlates three inputs —
-**waveform** (FSDB exported to text), **simulation log** (Xcelium), and the
-**source repository** — to explain failures automatically.
+(library cells, pass gates modeled with `tranif`). Simulated with Xcelium in a
+UVM environment. aidbg correlates **waveform** (FSDB → text), **simulation /
+UVM log**, and the **source repository** to produce a debug report.
 
-## First skill: `triage`
+## Principles
 
-Explains an X-contention end-to-end:
+- **Infrastructure and skills are separate.** `aidbg/core` is the
+  infrastructure (loaders, git access, agent, report) and holds *no*
+  debug-specific knowledge. `aidbg/skills` holds the debug heuristics as
+  plugins. The seam between them is the read-only `Context` + the skill
+  contract.
+- **aidbg never edits source.** It only reads the design/TB and the inputs.
+  Its sole output is the report. Fix suggestions are proposals for a human,
+  never applied.
+- **The report answers, in order:** what error → which commit/author
+  introduced it (git blame) → **the root cause (most important)** → a
+  suggested fix.
 
-```
-sim log  → infer offending net
-waveform → find where the net first goes X
-netlist  → back-trace the tranif pass gates driving that net
-         → flag simultaneously-conducting gates with conflicting values
-         → report root cause (strength conflict → X) and where to look next
-```
-
-### Run
+## Run
 
 ```bash
-python -m venv .venv && . .venv/bin/activate
-python -m aidbg.cli triage \
-    --wave samples/wave.txt \
-    --netlist samples/analog_mux.v \
-    --log samples/sim.log
+python -m aidbg report \
+  --wave samples/wave.txt \
+  --netlist samples/analog_mux.v \
+  --log samples/uvm.log \
+  --registry samples/assertions.json \
+  --source samples \
+  --out report.md --json report.json
 ```
 
 The bundled `samples/` contain a self-consistent scenario: an RTL control bug
-(`ctrl.sv` drives both selects high at reset) causes two `tranif1` pass gates in
-`analog_mux.v` to fight on the shared analog node `AOUT`.
+(`ctrl.sv` drives both selects high at reset) makes two `tranif1` pass gates in
+`analog_mux.v` fight on the shared analog node `AOUT`. aidbg traces the X back
+through the gates to the control statement, blames the commit, and proposes a
+fix — and corroborates the glitch checker as a *real* (not sim-artifact) glitch.
 
 ## Layout
 
 ```
 aidbg/
-  wave.py      FSDB-text waveform parser (strength-aware, swappable format)
-  netlist.py   tranif extraction + connectivity trace
-  simlog.py    Xcelium log parser
-  analyze.py   X-origin detection + contention reasoning (core)
-  cli.py       command-line entry point
-samples/       runnable example scenario
+  core/                 infrastructure only (no bug knowledge)
+    models.py           Finding / Evidence / FixProposal / Attribution / Report
+    wave.py netlist.py logs.py   loaders (waveform / netlist / Xcelium+UVM log)
+    repo.py             read-only git blame  ("who/which commit")
+    context.py          read-only view handed to skills (the infra⊥skill seam)
+    registry.py         skill contract + plugin registration
+    agent.py            run matching skills, aggregate into a Report
+    report.py           Markdown / JSON renderers
+    cli.py              `aidbg report`
+  skills/               debug knowledge as plugins (depend only on core API)
+    tranif_contention.py
+    glitch_triage.py
+    uvm_env.py
+samples/                runnable example scenario + assertion registry
 ```
+
+### Assertion registry
+
+Which SVA is a glitch checker is not guessed from naming — it is declared in a
+user-maintained registry (`samples/assertions.json`), mapping each assertion to
+`circuit_spec` or `glitch`. A fired glitch checker means a glitch was detected;
+`glitch-triage` then decides real (design) vs sim-artifact (verification-env).
 
 ## Status
 
-Early MVP. Roadmap: extend the causal chain into the RTL source (locate the
-driving statement, not just the control net), adapt parsers to the real
-exporter formats, and expose skills to an agent CLI (opencode-based).
+Working MVP of the core/skills architecture with three skills and an end-to-end
+report (incl. git attribution). Next: a git-history sample fixture that plants a
+bug at a known commit (to verify attribution), more skills, and an agent CLI
+(opencode-based) front-end.
