@@ -1,0 +1,7 @@
+xcelium> run
+xmsim: *W,TRANIF: Multiple drivers with conflicting strengths on net 'tb.dut.u_mux.AOUT' at time 35 NS.
+xmsim: *W,RECOXM (./samples/analog_mux.v,16): Possible contention through pass-gate tranif1 instances onto 'AOUT'.
+Assertion tb.chk_aout_known FAILED at time 36 NS: AOUT is X (expected 0/1).
+xmsim: *W,TRANIF: Multiple drivers with conflicting strengths on net 'tb.dut.u_mux.AOUT' at time 36 NS.
+xmsim: *E,ASRTST (./tb/tb_top.sv,88): assertion 'chk_aout_known' failed 2 time(s).
+Simulation complete via $finish(1) at time 120 NS + 0

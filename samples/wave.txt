@@ -1,0 +1,31 @@
+# FSDB text export (event list)
+# columns: time_ns  scope.signal  value(strength)
+# strength: St=strong Pu=pull Hi=hiZ  /  values 0 1 x z
+# only change points are listed (VCD-style edges)
+0      tb.clk                 St0
+0      tb.rst_n               St0
+0      tb.chan               St0   2'b00
+0      tb.dut.u_ctrl.sel0     Stx
+0      tb.dut.u_ctrl.sel1     Stx
+0      tb.dut.u_mux.IN0       St0
+0      tb.dut.u_mux.IN1       St1
+0      tb.dut.u_mux.AOUT      HiZ
+5      tb.clk                 St1
+10     tb.clk                 St0
+15     tb.rst_n               St1
+15     tb.clk                 St1
+# reset deasserted; ctrl bug latched both selects high at reset
+20     tb.dut.u_ctrl.sel0     St1
+20     tb.dut.u_ctrl.sel1     St1
+25     tb.clk                 St0
+30     tb.dut.u_mux.AOUT      St0
+# both pass gates on: IN0(St0) and IN1(St1) both reach AOUT
+35     tb.dut.u_mux.AOUT      Stx
+35     tb.clk                 St1
+40     tb.chan               St1   2'b01
+45     tb.clk                 St0
+55     tb.clk                 St1
+# chan=1 takes effect, sel0 drops, contention clears next edge
+60     tb.dut.u_ctrl.sel0     St0
+60     tb.dut.u_mux.AOUT      St1
+65     tb.clk                 St0
