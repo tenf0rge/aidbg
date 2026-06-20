@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 from .analyze import find_x_contention
+from .classify import classify, load_registry, summarize
 from .netlist import parse_netlist
 from .simlog import parse_log
 from .wave import parse_wave
@@ -57,6 +58,37 @@ def cmd_triage(args: argparse.Namespace) -> int:
     return 0
 
 
+_KIND_LABEL = {
+    "GLITCH_SVA": "GLITCH",
+    "CIRCUIT_SVA": "SPEC-SVA",
+    "UVM_ENV": "UVM-ENV",
+}
+
+
+def cmd_classify(args: argparse.Namespace) -> int:
+    registry = load_registry(args.registry)
+    events = classify(Path(args.log).read_text(), registry)
+
+    print(f"== aidbg classify ==\nLog: {args.log}")
+    if args.registry:
+        print(f"Assertion registry: {args.registry} ({len(registry)} entries)")
+    print(f"Summary: {summarize(events)}\n")
+
+    if not events:
+        print("No error/fatal events found.")
+        return 0
+
+    for e in events:
+        t = f"t={e.time}ns" if e.time is not None else "t=?"
+        loc = f" {e.file}:{e.line}" if e.file else ""
+        nets = f"  nets={e.nets}" if e.nets else ""
+        print(f"[{_KIND_LABEL[e.kind]}/{e.severity}] {t}{loc}  {e.name}")
+        if e.text:
+            print(f"    {e.text}{nets}")
+        print(f"    -> {e.hint}\n")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="aidbg", description="AI debug assistant for mixed-signal SoC")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -67,6 +99,11 @@ def main(argv: list[str] | None = None) -> int:
     t.add_argument("--log")
     t.add_argument("--net", help="net to analyze (basename or full path); inferred from log if omitted")
     t.set_defaults(func=cmd_triage)
+
+    c = sub.add_parser("classify", help="classify UVM/SVA errors and give a Design/TB hint")
+    c.add_argument("--log", required=True)
+    c.add_argument("--registry", help="assertion registry JSON (circuit_spec vs glitch)")
+    c.set_defaults(func=cmd_classify)
 
     args = p.parse_args(argv)
     return args.func(args)

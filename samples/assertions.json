@@ -1,0 +1,8 @@
+{
+  "_comment": "User-maintained registry: classifies each SVA by intent. 'type' is one of circuit_spec | glitch. Matching is by assertion basename (last hierarchy component). When an assertion is absent, aidbg treats it as circuit_spec by default.",
+  "assertions": {
+    "chk_aout_no_glitch": { "type": "glitch", "note": "fires => real-or-sim glitch on AOUT" },
+    "chk_aout_known":     { "type": "circuit_spec", "note": "AOUT must be 0/1 when selected" },
+    "chk_handshake_ack":  { "type": "circuit_spec", "note": "protocol: ack only after req" }
+  }
+}

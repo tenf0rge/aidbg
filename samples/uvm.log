@@ -1,0 +1,11 @@
+UVM_INFO @ 0: reporter [RNTST] Running test tb_mux_test...
+UVM_INFO ./tb/env/mux_env.sv(54) @ 0 ns: uvm_test_top.env [BUILD] environment built
+xmsim: *W,TRANIF: Multiple drivers with conflicting strengths on net 'tb.dut.u_mux.AOUT' at time 35 NS.
+Assertion tb.dut.u_chk.chk_aout_no_glitch FAILED at time 35 NS.
+Assertion tb.dut.u_chk.chk_aout_known FAILED at time 36 NS: AOUT is X (expected 0/1).
+UVM_ERROR ./tb/env/scoreboard.sv(142) @ 40 ns: uvm_test_top.env.sb [MISCMP] AOUT mismatch: exp=1 got=x
+UVM_WARNING ./tb/env/mux_monitor.sv(88) @ 41 ns: uvm_test_top.env.mon [SAMPLE] sampled X on AOUT
+Assertion tb.dut.u_chk.chk_handshake_ack FAILED at time 70 NS: ack without preceding req.
+UVM_ERROR ./tb/seq/mux_seq.sv(33) @ 95 ns: uvm_test_top.env.agent.seqr [NOITEM] response fifo empty
+UVM_FATAL ./tb/env/scoreboard.sv(150) @ 100 ns: uvm_test_top.env.sb [TLM] null transaction handle
+UVM_INFO @ 120 ns: reporter [TEST_DONE] 3 UVM_ERROR, 1 UVM_FATAL
