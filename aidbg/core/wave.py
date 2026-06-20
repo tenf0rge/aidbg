@@ -40,9 +40,18 @@ class Waveform:
 
 
 def _split_value(token: str) -> tuple[str, str]:
+    """Strip a strength prefix only if the remainder is a legal logic value."""
     if len(token) >= 3 and token[:2] in _STRENGTH:
-        return token[2:].lower(), _STRENGTH[token[:2]]
+        rest = token[2:].lower()
+        if rest and set(rest) <= {"0", "1", "x", "z"}:
+            return rest, _STRENGTH[token[:2]]
     return token.lower(), ""
+
+
+def _literal_body(tok: str) -> str:
+    """'2'b01' -> '01', '8'hxx' -> 'xx'. Drops size and base."""
+    body = tok.split("'", 1)[1]
+    return body[1:] if body[:1].lower() in "bodh" else body
 
 
 def parse_wave(text: str) -> Waveform:
@@ -58,7 +67,15 @@ def parse_wave(text: str) -> Waveform:
             time = int(parts[0])
         except ValueError:
             continue
-        val, strength = _split_value(parts[2])
-        wf.edges.append(Edge(time=time, signal=parts[1], value=val, strength=strength, raw=parts[2]))
+        # A sized literal in any value column (e.g. "2'b00") is the bus value
+        # and takes precedence over a placeholder scalar/strength token.
+        lit = next((t for t in parts[2:] if "'" in t), None)
+        if lit is not None:
+            raw, strength = lit, ""
+            val = _literal_body(lit).lower()
+        else:
+            raw = parts[2]
+            val, strength = _split_value(raw)
+        wf.edges.append(Edge(time=time, signal=parts[1], value=val, strength=strength, raw=raw))
     wf.edges.sort(key=lambda e: e.time)
     return wf

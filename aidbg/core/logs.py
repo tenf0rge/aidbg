@@ -41,6 +41,11 @@ def parse_log(text: str) -> list[LogEvent]:
         u = _UVM.search(line)
         if u:
             sev, f, ln, t, comp, uid, msg = u.groups()
+            # Guard against grabbing the first message word as a component when
+            # no real UVM path is present. UVM paths contain '.' (or uvm_*).
+            if comp and "." not in comp and not comp.startswith("uvm_"):
+                msg = f"{comp} {msg}".strip()
+                comp = None
             out.append(LogEvent(
                 source="uvm", severity=sev, code=uid or "-",
                 time=int(t) if t else None, file=f, line=int(ln) if ln else None,

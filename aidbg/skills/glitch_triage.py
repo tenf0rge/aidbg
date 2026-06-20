@@ -40,7 +40,7 @@ class GlitchTriage:
                 for node in shared:
                     full = ctx.wave.resolve(node)
                     for ed in ctx.wave.edges_of(full):
-                        if ed.value == "x" and abs(ed.time - t) <= 1:
+                        if "x" in ed.value and abs(ed.time - t) <= 1:
                             physical = (node, ed)
                             break
                     if physical:

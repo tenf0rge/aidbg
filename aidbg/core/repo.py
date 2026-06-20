@@ -29,7 +29,13 @@ class Repo:
     def blame(self, file: str, line: int) -> Attribution | None:
         """Blame a single line. `file` may be absolute or repo-relative."""
         p = Path(file)
-        rel = p if not p.is_absolute() else p
+        if p.is_absolute():
+            try:
+                rel = p.relative_to(self.root)
+            except ValueError:
+                rel = p   # outside the repo; let git report it
+        else:
+            rel = p
         try:
             out = subprocess.run(
                 ["git", "-C", str(self.root), "blame", "-L", f"{line},{line}",

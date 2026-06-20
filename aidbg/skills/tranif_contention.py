@@ -24,7 +24,8 @@ class TranifContention:
 
         for node in shared_nodes(gates):
             full = wf.resolve(node)
-            x_edge = next((e for e in wf.edges_of(full) if e.value == "x"), None)
+            # any X bit (scalar "x" or a bus value like "xxxx")
+            x_edge = next((e for e in wf.edges_of(full) if "x" in e.value), None)
             if x_edge is None:
                 continue
 
