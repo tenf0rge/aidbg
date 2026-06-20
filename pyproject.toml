@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aidbg"
+version = "0.2.0"
+description = "Autonomous debug assistant for mixed-signal SoC verification (RTL + extracted netlist)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []   # core runs on the standard library only
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+aidbg = "aidbg.core.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["aidbg*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

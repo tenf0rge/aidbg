@@ -53,22 +53,48 @@ def cmd_report(args: argparse.Namespace) -> int:
         return 2
 
     rep = agent.run(ctx, inputs)
-    md = report_mod.render_markdown(rep)
 
-    if args.out:
+    if args.json:
+        js = report_mod.render_json(rep)
+        if args.json == "-":
+            print(js)
+        else:
+            Path(args.json).write_text(js, encoding="utf-8")
+            print(f"wrote {args.json}")
+        if not args.out:
+            return 0
+
+    md = report_mod.render_markdown(rep)
+    if args.out and args.out != "-":
         Path(args.out).write_text(md, encoding="utf-8")
         print(f"wrote {args.out}")
     else:
         print(md)
+    return 0
+
+
+def cmd_skills(args: argparse.Namespace) -> int:
+    """List available skills so an agent/front-end can discover capabilities."""
+    import aidbg.skills  # noqa: F401  (populates the registry)
+    from .registry import SKILLS
+
     if args.json:
-        Path(args.json).write_text(report_mod.render_json(rep), encoding="utf-8")
-        print(f"wrote {args.json}")
+        manifest = [{"name": s.name, "description": s.description,
+                     "consumes": sorted(s.consumes)} for s in SKILLS]
+        print(json.dumps(manifest, indent=2, ensure_ascii=False))
+    else:
+        for s in SKILLS:
+            print(f"{s.name}\n    {s.description}\n    consumes: {', '.join(sorted(s.consumes))}")
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="aidbg", description="autonomous mixed-signal SoC debug assistant")
     sub = p.add_subparsers(dest="cmd", required=True)
+
+    s = sub.add_parser("skills", help="list available debug skills (capabilities)")
+    s.add_argument("--json", action="store_true", help="emit machine-readable manifest")
+    s.set_defaults(func=cmd_skills)
 
     r = sub.add_parser("report", help="run skills over the evidence and emit a debug report")
     r.add_argument("--wave")

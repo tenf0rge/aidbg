@@ -1,0 +1,8 @@
+{
+  "_comment": "User-maintained registry: classifies each SVA by intent. type is circuit_spec | glitch. Matched by assertion basename. Unknown => circuit_spec.",
+  "assertions": {
+    "chk_aout_no_glitch": { "type": "glitch", "note": "fires => glitch detected on AOUT" },
+    "chk_aout_known":     { "type": "circuit_spec", "note": "AOUT must be 0/1 when selected" },
+    "chk_handshake_ack":  { "type": "circuit_spec", "note": "protocol: ack only after req" }
+  }
+}

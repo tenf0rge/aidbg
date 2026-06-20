@@ -48,7 +48,8 @@ class Repo:
             elif ln.startswith("author-time "):
                 import datetime
                 ts = int(ln.split()[1])
-                date = datetime.datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d")
+                date = datetime.datetime.fromtimestamp(
+                    ts, datetime.timezone.utc).strftime("%Y-%m-%d")
             elif ln.startswith("summary "):
                 summary = ln[len("summary "):].strip()
         if commit is None:
