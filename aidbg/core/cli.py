@@ -47,6 +47,7 @@ def cmd_report(args: argparse.Namespace) -> int:
         ctx.repo = Repo.discover(Path(args.source))
         if ctx.repo:
             inputs["repo"] = str(ctx.repo.root)
+    ctx.lang = args.lang
 
     if not any([ctx.wave, ctx.netlist, ctx.log]):
         print("Provide at least one of --wave / --netlist / --log.", file=sys.stderr)
@@ -64,7 +65,7 @@ def cmd_report(args: argparse.Namespace) -> int:
         if not args.out:
             return 0
 
-    md = report_mod.render_markdown(rep)
+    md = report_mod.render_markdown(rep, lang=args.lang)
     if args.out and args.out != "-":
         Path(args.out).write_text(md, encoding="utf-8")
         print(f"wrote {args.out}")
@@ -102,6 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--log")
     r.add_argument("--registry", help="assertion registry JSON (circuit_spec vs glitch)")
     r.add_argument("--source", help="design/TB source root (read-only; enables git blame)")
+    r.add_argument("--lang", choices=("en", "ja"), default="en", help="report language (default: en)")
     r.add_argument("--out", help="write Markdown report to this path")
     r.add_argument("--json", help="also write JSON report to this path")
     r.set_defaults(func=cmd_report)

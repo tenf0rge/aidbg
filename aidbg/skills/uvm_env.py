@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from aidbg.core.context import Context
+from aidbg.core.i18n import t
 from aidbg.core.models import Evidence, Finding, FixProposal
 from aidbg.core.registry import register
 
@@ -13,6 +14,18 @@ _ROLES = [
     ("sequenc", "sequencer"), ("seqr", "sequencer"), ("seq", "sequence"),
     ("agent", "agent"),
 ]
+
+# role -> (layer, confidence, root_cause key, fix key)
+_PLAN = {
+    "scoreboard": ("unknown", 0.45, "uvm.rc_checker", "uvm.fix_checker"),
+    "ref-model":  ("unknown", 0.45, "uvm.rc_checker", "uvm.fix_checker"),
+    "driver":     ("verification-env", 0.65, "uvm.rc_stimulus", "uvm.fix_stimulus"),
+    "sequencer":  ("verification-env", 0.65, "uvm.rc_stimulus", "uvm.fix_stimulus"),
+    "sequence":   ("verification-env", 0.65, "uvm.rc_stimulus", "uvm.fix_stimulus"),
+    "agent":      ("verification-env", 0.65, "uvm.rc_stimulus", "uvm.fix_stimulus"),
+    "monitor":    ("verification-env", 0.55, "uvm.rc_monitor", "uvm.fix_monitor"),
+}
+_DEFAULT = ("unknown", 0.4, "uvm.rc_unknown", "uvm.fix_unknown")
 
 
 def _role(comp: str | None) -> str | None:
@@ -33,43 +46,25 @@ class UvmEnv:
         return any(e.source == "uvm" and e.severity in ("ERROR", "FATAL") for e in ctx.log)
 
     def analyze(self, ctx: Context) -> list[Finding]:
+        lang = ctx.lang
         findings: list[Finding] = []
         for e in ctx.log:
             if not (e.source == "uvm" and e.severity in ("ERROR", "FATAL")):
                 continue
-            role = _role(e.component)
-            if role in ("scoreboard", "ref-model"):
-                layer, conf = "unknown", 0.45
-                rc = ("Mismatch reported by a checker — a symptom, not a root cause. "
-                      "Trace expected vs actual back to the DESIGN output; separately "
-                      "confirm the reference/expected value is itself correct (TB).")
-                fix = "Compare DUT output against the reference model at the mismatch time; verify the predictor."
-            elif role in ("driver", "sequencer", "sequence", "agent"):
-                layer, conf = "verification-env", 0.65
-                rc = ("Error originates in the stimulus/transport path → most likely a "
-                      "VERIFICATION-ENV defect (sequence/driver/TLM wiring).")
-                fix = "Inspect the sequence/driver: item generation, response handling, TLM port connections."
-            elif role == "monitor":
-                layer, conf = "verification-env", 0.55
-                rc = ("Monitor-side error → check sampling alignment to clock/reset before "
-                      "attributing to the design.")
-                fix = "Align monitor sampling (clocking block / @posedge) with the protocol."
-            else:
-                layer, conf = "unknown", 0.4
-                rc = "UVM component error; localize the reporting component to weigh design vs TB."
-                fix = "Identify the reporting component and its data source."
+            layer, conf, rc_key, fix_key = _PLAN.get(_role(e.component), _DEFAULT)
 
             loc = f"{e.file}:{e.line}" if e.file else None
             attribution = ctx.blame(e.file, e.line) if e.file and e.line else None
+            err = t(lang, "uvm.error_t", text=e.text, t=e.time) if e.time is not None else e.text
             findings.append(Finding(
                 skill=self.name,
-                title=f"UVM {e.severity} [{e.code}] @ {e.component or '?'}",
+                title=t(lang, "uvm.title", sev=e.severity, code=e.code, comp=e.component or "?"),
                 layer=layer, confidence=conf,
-                error=f"{e.text} (t={e.time}ns)" if e.time is not None else e.text,
-                root_cause=rc,
+                error=err,
+                root_cause=t(lang, rc_key),
                 evidence=[Evidence(detail=e.text, time=e.time,
                                    net=e.nets[0] if e.nets else None, source=loc)],
                 attribution=attribution,
-                fix=FixProposal(location=loc, description=fix),
+                fix=FixProposal(location=loc, description=t(lang, fix_key)),
             ))
         return findings

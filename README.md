@@ -31,8 +31,13 @@ python -m aidbg report \
   --log samples/uvm.log \
   --registry samples/assertions.json \
   --source samples \
+  --lang ja \
   --out report.md --json report.json
 ```
+
+`--lang {en,ja}` selects the report language (default `en`). Translations live
+in `aidbg/core/i18n.py`; skills reference message keys, so adding a language is
+a catalog edit, not a skill change.
 
 The bundled `samples/` contain a self-consistent scenario: an RTL control bug
 (`ctrl.sv` drives both selects high at reset) makes two `tranif1` pass gates in

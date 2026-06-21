@@ -24,6 +24,7 @@ class Context:
     assertions: dict[str, dict] = field(default_factory=dict)  # registry
     source_root: Path | None = None
     repo: Repo | None = None
+    lang: str = "en"                   # report language for skill-produced text
     _src_cache: list[Path] = field(default_factory=list, repr=False)
 
     # ---- source (read-only) ----
