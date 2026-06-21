@@ -59,11 +59,24 @@ aidbg/
     report.py           Markdown / JSON renderers
     cli.py              `aidbg report`
   skills/               debug knowledge as plugins (depend only on core API)
-    tranif_contention.py
-    glitch_triage.py
-    uvm_env.py
-samples/                runnable example scenario + assertion registry
+    tranif_contention.py    X from simultaneously-conducting tranif gates
+    glitch_triage.py        fired glitch checker: real (design) vs sim-artifact
+    uvm_env.py              UVM ERROR/FATAL triage by component role
+    reg_data_mismatch.py    scoreboard read miscompare vs the actual bus prdata
+samples/                runnable example scenarios + assertion registry
+  fixture/              git-history fixture (planted bug at a known commit)
+  scenario_tb/          verification-env root cause (sim-artifact glitch)
+  apb/                  real-format APB scenario (CSV waveform + Xcelium UVM log)
 ```
+
+## Waveform formats
+
+Two text forms are auto-detected by `--wave`:
+
+- **CSV table** — `Time(ns),sigA,sigB[31:0],…` then one row per timestep, bus
+  values in hex (typical of an FSDB→CSV export). Compressed to change-points.
+- **Event list** — `time scope.signal value(strength)`, one change per line
+  (strength-aware, for mixed-signal `tranif` debugging).
 
 ### Assertion registry
 

@@ -53,8 +53,12 @@ class UvmEnv:
                 continue
             layer, conf, rc_key, fix_key = _PLAN.get(_role(e.component), _DEFAULT)
 
-            loc = f"{e.file}:{e.line}" if e.file else None
-            attribution = ctx.blame(e.file, e.line) if e.file and e.line else None
+            # The reported file is often the UVM macro location (uvm_pkg.sv),
+            # not the user's source — don't attribute the bug to the library.
+            is_lib = bool(e.file) and ("uvm_pkg" in e.file or "/uvm/" in e.file
+                                       or e.file.rsplit("/", 1)[-1].startswith("uvm_"))
+            loc = f"{e.file}:{e.line}" if e.file and not is_lib else None
+            attribution = ctx.blame(e.file, e.line) if loc and e.line else None
             err = t(lang, "uvm.error_t", text=e.text, t=e.time) if e.time is not None else e.text
             findings.append(Finding(
                 skill=self.name,

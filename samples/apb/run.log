@@ -1,0 +1,15 @@
+TOOL:	xcelium(64)	24.09-s001: Started on Jun 21, 2026 09:11:00 JST
+Loading snapshot worklib.tb_top:sv...
+-------------------------------------------------------------------------------
+Xcelium Simulation Standard Output Log
+-------------------------------------------------------------------------------
+UVM_INFO @ 0: reporter [RNTST] Running test apb_rw_test...
+UVM_INFO /src/uvm_pkg.sv(100) @ 50: uvm_test_top.env.agt.drv [TX_START] Trans 0: Write Addr=32'h0000_1000 Data=32'hA5A5_B6B6
+UVM_INFO /src/uvm_pkg.sv(100) @ 50: uvm_test_top.env.scb [SCB_VAL] Expected Write stored for Addr=32'h0000_1000
+UVM_INFO /src/uvm_pkg.sv(100) @ 70: uvm_test_top.env.agt.drv [TX_START] Trans 1: Write Addr=32'h0000_1004 Data=32'h1234_5678
+UVM_INFO /src/uvm_pkg.sv(100) @ 70: uvm_test_top.env.scb [SCB_VAL] Expected Write stored for Addr=32'h0000_1004
+UVM_INFO /src/uvm_pkg.sv(100) @ 90: uvm_test_top.env.agt.mon [MON_REC] Monitored Read : Addr=32'h0000_1000 Data=32'hDEAD_DEAD
+UVM_ERROR /src/uvm_pkg.sv(220) @ 95: uvm_test_top.env.scb [SCB_CMP] MISMATCH for Addr=32'h0000_1000. Expected=32'hA5A5_B6B6 Got=32'hDEAD_DEAD
+UVM_INFO /src/uvm_pkg.sv(100) @ 110: uvm_test_top.env.agt.mon [MON_REC] Monitored Read : Addr=32'h0000_1004 Data=32'h1234_5678
+UVM_ERROR /src/uvm_pkg.sv(220) @ 115: uvm_test_top.env.scb [SCB_CMP] MISMATCH for Addr=32'h0000_1004. Expected=32'h1234_5678 Got=32'hBADC_0DE1
+UVM_INFO @ 120: reporter [TEST_DONE] 2 UVM_ERROR

@@ -5,9 +5,12 @@ without touching skills.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from .models import Edge
+
+_SLICE = re.compile(r"\[\d+(:\d+)?\]\s*$")   # paddr[31:0] -> paddr
 
 _STRENGTH = {"St": "strong", "Pu": "pull", "Hi": "hiz", "We": "weak",
              "La": "large", "Me": "medium", "Sm": "small"}
@@ -55,6 +58,47 @@ def _literal_body(tok: str) -> str:
 
 
 def parse_wave(text: str) -> Waveform:
+    """Dispatch on format: CSV table (header starts with 'Time') vs event list."""
+    for raw in text.splitlines():
+        s = raw.strip()
+        if not s or s.startswith("#"):
+            continue
+        if "," in s and s.lower().startswith("time"):
+            return parse_wave_csv(text)
+        break
+    return _parse_wave_events(text)
+
+
+def parse_wave_csv(text: str) -> Waveform:
+    """CSV table export: header `Time(ns),sigA,sigB[31:0],...` then one row per
+    timestep with all signal values. Bus values are hex (no base prefix), scalars
+    0/1/x/z. Only change points are recorded (edges), matching the event model.
+    """
+    wf = Waveform()
+    rows = [ln for ln in text.splitlines() if ln.strip() and not ln.strip().startswith("#")]
+    if not rows:
+        return wf
+    header = [h.strip() for h in rows[0].split(",")]
+    names = [_SLICE.sub("", h) for h in header[1:]]   # strip [31:0] width
+    prev: dict[str, str] = {}
+    for row in rows[1:]:
+        cells = [c.strip() for c in row.split(",")]
+        if not cells or not cells[0]:
+            continue
+        try:
+            time = int(cells[0])
+        except ValueError:
+            continue
+        for name, raw in zip(names, cells[1:]):
+            val = raw.lower()
+            if prev.get(name) != val:                 # emit only on change
+                wf.edges.append(Edge(time=time, signal=name, value=val, strength="", raw=raw))
+                prev[name] = val
+    wf.edges.sort(key=lambda e: e.time)
+    return wf
+
+
+def _parse_wave_events(text: str) -> Waveform:
     wf = Waveform()
     for line in text.splitlines():
         line = line.strip()
