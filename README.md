@@ -36,8 +36,18 @@ does the judgement; aidbg gives it precise, queryable access to huge
 waveforms/logs so it never has to ingest them wholesale.
 
 ```bash
-aidbg auto --wave samples/apb/wave.csv --log samples/apb/run.log --lang ja
+# free, no login (bundled free model)
+aidbg auto --engine opencode --wave samples/apb/wave.csv --log samples/apb/run.log --lang ja
+# higher quality, uses your Claude Code quota
+aidbg auto --engine claude   --wave samples/apb/wave.csv --log samples/apb/run.log --lang ja
 ```
+
+`--engine` switches the LLM driver: **opencode** (free models, no API key) or
+**claude** (Claude Code CLI — uses your Claude usage). Engine quality shows: on
+the APB sample the free model mislabels both mismatches, while the claude engine
+queries the correct read cycle and correctly splits them into one DESIGN bug
+(bus carried wrong data) and one VERIFICATION-ENV bug (bus correct, scoreboard
+mis-captured) — matching the deterministic skill, with deeper reasoning.
 
 ### Primitive tool box (what the agent calls)
 
