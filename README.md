@@ -25,6 +25,33 @@ runs it, and folds its findings into the report.
 AIDBG_SKILLS_PATH=~/my-org-skills aidbg report --wave … --log …
 ```
 
+## Two ways to run
+
+**Deterministic** (`aidbg report`) — Python skills parse the inputs and emit a
+ranked report. No LLM, fast, reproducible, CI-friendly.
+
+**Autonomous** (`aidbg auto`) — aidbg drives an LLM agent (opencode) that calls
+aidbg's primitive tools to gather facts and writes the report itself. The LLM
+does the judgement; aidbg gives it precise, queryable access to huge
+waveforms/logs so it never has to ingest them wholesale.
+
+```bash
+aidbg auto --wave samples/apb/wave.csv --log samples/apb/run.log --lang ja
+```
+
+### Primitive tool box (what the agent calls)
+
+| command | purpose |
+|---|---|
+| `aidbg signals --wave W` | list signals |
+| `aidbg query --wave W --signal S [--time N]` | value at a time / all change points |
+| `aidbg grep-log --log L [--severity E] [--pattern RE]` | filter log events (JSON) |
+| `aidbg blame --source DIR --file F --line N` | git blame a line |
+| `aidbg find-driver --source DIR --signal S` | where a signal is driven in SV |
+
+These are deterministic and stdlib-only — usable by any agent (opencode, Claude
+Code, …) or directly by a human.
+
 ## Principles
 
 - **Infrastructure and skills are separate.** `aidbg/core` is the
