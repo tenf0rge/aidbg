@@ -15,9 +15,44 @@ from __future__ import annotations
 import re
 
 from aidbg.core.context import Context
-from aidbg.core.i18n import t
+from aidbg.core.i18n import add_messages, t
 from aidbg.core.models import Evidence, Finding, FixProposal
 from aidbg.core.registry import register
+
+add_messages({
+    "reg.title": {"en": "register read mismatch at {addr}", "ja": "{addr} のリードデータ不一致"},
+    "reg.error": {
+        "en": "Scoreboard reports a read-data mismatch at {addr}: expected {exp}, got {got}.",
+        "ja": "scoreboard が {addr} でリードデータ不一致を報告: 期待 {exp}、観測 {got}。"},
+    "reg.rc_design": {
+        "en": "The waveform shows prdata={wave} on the bus at the read of {addr} — it matches the "
+              "scoreboard's observed value and differs from expected. The DUT returned wrong data → DESIGN bug.",
+        "ja": "波形上、{addr} のリード時にバスは prdata={wave} を示しており、scoreboard の観測値と一致・期待値"
+              "と相違。DUT が誤データを返している → 設計バグ。"},
+    "reg.rc_tb": {
+        "en": "The waveform shows prdata={wave} on the bus at the read of {addr}, which equals the EXPECTED "
+              "value. The bus was correct but the scoreboard/monitor captured or expected a different value "
+              "→ VERIFICATION-ENV bug.",
+        "ja": "波形上、{addr} のリード時にバスは prdata={wave}（＝期待値）を示している。バスは正しく、"
+              "scoreboard/monitor 側が取り違え／期待値が誤り → 検証環境バグ。"},
+    "reg.rc_unknown": {
+        "en": "The waveform prdata={wave} at {addr} matches neither expected ({exp}) nor observed ({got}); "
+              "re-check the sampling time and address decode.",
+        "ja": "波形の prdata={wave}（{addr}）は期待 ({exp})・観測 ({got}) のいずれとも一致しない。"
+              "サンプリング時刻とアドレスデコードを再確認。"},
+    "reg.ev_bus": {"en": "bus prdata={wave} at read of {addr} (t={t}ns)",
+                   "ja": "{addr} リード時のバス prdata={wave}（t={t}ns）"},
+    "reg.ev_scb": {"en": "scoreboard: expected {exp}, got {got}", "ja": "scoreboard: 期待 {exp}、観測 {got}"},
+    "reg.fix_design": {
+        "en": "Inspect the DUT read-data path / register decode for {addr}.",
+        "ja": "{addr} の DUT リードデータ経路／レジスタデコードを点検。"},
+    "reg.fix_tb": {
+        "en": "Check the monitor sampling point (pready/penable alignment) and the scoreboard's expected model.",
+        "ja": "monitor のサンプリング点（pready/penable 整合）と scoreboard の期待モデルを確認。"},
+    "reg.fix_unknown": {
+        "en": "Re-check the read timing and address decode against the monitor sampling.",
+        "ja": "リードのタイミングとアドレスデコードを monitor のサンプリングと突き合わせて再確認。"},
+})
 
 _ADDR = re.compile(r"Addr\s*=\s*([0-9A-Fa-fxz_'h]+)")
 _EXP = re.compile(r"(?:Expected|Exp)\s*=\s*([0-9A-Fa-fxz_'h]+)")

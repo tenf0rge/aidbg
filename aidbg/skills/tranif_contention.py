@@ -4,10 +4,33 @@ then bridge to the RTL control that enabled the gates and blame the commit.
 from __future__ import annotations
 
 from aidbg.core.context import Context
-from aidbg.core.i18n import t
+from aidbg.core.i18n import add_messages, t
 from aidbg.core.models import Evidence, Finding, FixProposal
 from aidbg.core.netlist import gates_touching, shared_nodes
 from aidbg.core.registry import register
+
+add_messages({
+    "tranif.title": {"en": "tranif contention on {node} → X", "ja": "{node} で tranif 競合 → X"},
+    "tranif.error": {
+        "en": "Node '{node}' becomes X at t={t}ns; sim/assertion flags multi-driver strength conflict.",
+        "ja": "ノード '{node}' が t={t}ns で X 化。シム/アサーションが多重ドライブの strength 競合を検出。"},
+    "tranif.root_cause": {
+        "en": "{n} pass gates conduct simultaneously because controls ({ctrls}) are asserted together, "
+              "so conflicting analog inputs fight on '{node}' → strength conflict → X. The defect is in "
+              "the control logic that allows the enables to overlap.",
+        "ja": "制御 ({ctrls}) が同時にアサートされ、{n} 個のパスゲートが同時導通。競合するアナログ入力が "
+              "'{node}' で衝突し strength 競合 → X。真因はイネーブルの重なりを許している制御ロジック。"},
+    "tranif.fix": {
+        "en": "Make {ctrls} mutually exclusive (one-hot). Ensure reset/default drives all enables inactive "
+              "so the pass gates never overlap.",
+        "ja": "{ctrls} を相互排他（one-hot）にする。リセット/デフォルトで全イネーブルを非活性にし、"
+              "パスゲートが重ならないようにする。"},
+    "tranif.ev_x": {"en": "{node} goes X", "ja": "{node} が X 化"},
+    "tranif.ev_gate": {
+        "en": "{kind} conducting (ctrl {ctrl}=on), drives {other}={raw}",
+        "ja": "{kind} が導通（制御 {ctrl}=オン）、{other}={raw} を駆動"},
+    "tranif.ev_driven": {"en": "{ctrl} driven: {txt}", "ja": "{ctrl} の駆動: {txt}"},
+})
 
 
 @register

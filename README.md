@@ -8,6 +8,23 @@ functional path is analog, brought in as a schematic-extracted netlist
 UVM environment. aidbg correlates **waveform** (FSDB → text), **simulation /
 UVM log**, and the **source repository** to produce a debug report.
 
+## Kernel + plugins
+
+The goal: **swap the skills, debug any verification**. `aidbg/core` is a fixed
+kernel; all domain knowledge is a plugin skill. Skills are **auto-discovered** —
+every module under `aidbg/skills/` is imported automatically, and any directory
+on the `AIDBG_SKILLS_PATH` env var is scanned too. Adding a skill is dropping a
+file; no core edit, and skills can live entirely outside this repo.
+
+A skill is self-contained: it carries its own logic, its own message catalog
+(`add_messages(...)`, so translations don't live in core), and ideally its own
+sample fixture and test. The kernel discovers it, feeds it a read-only `Context`,
+runs it, and folds its findings into the report.
+
+```bash
+AIDBG_SKILLS_PATH=~/my-org-skills aidbg report --wave … --log …
+```
+
 ## Principles
 
 - **Infrastructure and skills are separate.** `aidbg/core` is the

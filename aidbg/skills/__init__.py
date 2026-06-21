@@ -1,7 +1,9 @@
-"""aidbg skills — debug knowledge as plugins.
+"""aidbg skills — debug knowledge as auto-discovered plugins.
 
-Importing this package registers every skill (each module calls @register).
-Skills depend only on the `aidbg.core` API; they never touch infra internals
-or the design/TB source except through the read-only Context.
+Modules here are imported automatically by aidbg.core.registry.discover(); each
+calls @register. There is intentionally NO explicit import list — dropping a new
+skill file into this package (or a directory on AIDBG_SKILLS_PATH) is enough.
+
+Skills depend only on the aidbg.core API and reach the design/TB source solely
+through the read-only Context.
 """
-from . import glitch_triage, reg_data_mismatch, tranif_contention, uvm_env  # noqa: F401

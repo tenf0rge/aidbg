@@ -4,10 +4,41 @@ sim-artifact (verification-env), by correlating with physical evidence.
 from __future__ import annotations
 
 from aidbg.core.context import Context
-from aidbg.core.i18n import t
+from aidbg.core.i18n import add_messages, t
 from aidbg.core.models import Evidence, Finding, FixProposal
 from aidbg.core.netlist import shared_nodes
 from aidbg.core.registry import register
+
+add_messages({
+    "glitch.title_real": {"en": "glitch '{name}' is REAL (design)",
+                          "ja": "グリッチ '{name}' は実グリッチ（設計）"},
+    "glitch.title_artifact": {"en": "glitch '{name}' likely SIM-ARTIFACT (verification-env)",
+                              "ja": "グリッチ '{name}' は見かけ上（検証環境）の可能性"},
+    "glitch.error": {"en": "Glitch checker '{name}' fired at t={t}ns.",
+                     "ja": "グリッチチェッカ '{name}' が t={t}ns で発火。"},
+    "glitch.rc_real": {
+        "en": "Corroborated by a physical contention/X event on '{node}' at t={t}ns → this is a real "
+              "glitch from the design (see tranif-contention finding for the driving logic).",
+        "ja": "t={t}ns に '{node}' で物理的な競合/X が併発 → 設計起因の実グリッチ（駆動ロジックは "
+              "tranif-contention の指摘を参照）。"},
+    "glitch.rc_artifact": {
+        "en": "No physical contention/X found on a shared node near the firing time. Suspect a 0-delay "
+              "race / delta-cycle ordering or model granularity in the TB/analog model rather than a real "
+              "design glitch.",
+        "ja": "発火時刻の近傍に共有ノードの物理的な競合/X が見当たらない。実設計のグリッチではなく、"
+              "0遅延レース/デルタサイクル順序、またはTB/アナログモデルの粒度を疑う。"},
+    "glitch.ev_fired": {"en": "glitch checker fired", "ja": "グリッチチェッカ発火"},
+    "glitch.ev_phys": {"en": "contention/X on shared node", "ja": "共有ノードの競合/X"},
+    "glitch.fix_real": {
+        "en": "Fix the contention root cause in the control logic; the glitch checker is correctly "
+              "reporting a real design defect.",
+        "ja": "制御ロジックの競合の真因を修正する。グリッチチェッカは実設計欠陥を正しく報告している。"},
+    "glitch.fix_artifact": {
+        "en": "Check TB driving/sampling for 0-delay races; add NBA/#0 separation or refine the analog "
+              "model's event granularity. Confirm before treating as a design bug.",
+        "ja": "TB の駆動/サンプリングの0遅延レースを確認。NBA/#0 で分離、またはアナログモデルのイベント"
+              "粒度を見直す。設計バグと断定する前に確認すること。"},
+})
 
 
 @register

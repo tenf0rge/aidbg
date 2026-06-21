@@ -2,9 +2,42 @@
 from __future__ import annotations
 
 from aidbg.core.context import Context
-from aidbg.core.i18n import t
+from aidbg.core.i18n import add_messages, t
 from aidbg.core.models import Evidence, Finding, FixProposal
 from aidbg.core.registry import register
+
+add_messages({
+    "uvm.title": {"en": "UVM {sev} [{code}] @ {comp}", "ja": "UVM {sev} [{code}] @ {comp}"},
+    "uvm.error_t": {"en": "{text} (t={t}ns)", "ja": "{text}（t={t}ns）"},
+    "uvm.rc_checker": {
+        "en": "Mismatch reported by a checker — a symptom, not a root cause. Trace expected vs actual back "
+              "to the DESIGN output; separately confirm the reference/expected value is itself correct (TB).",
+        "ja": "チェッカが報告した不一致 — 症状であり真因ではない。期待値と実値を DESIGN 出力まで辿り、"
+              "別途、参照/期待値そのものの正しさ（TB）も確認する。"},
+    "uvm.fix_checker": {
+        "en": "Compare DUT output against the reference model at the mismatch time; verify the predictor.",
+        "ja": "不一致時刻で DUT 出力と参照モデルを突き合わせ、予測器（predictor）を検証する。"},
+    "uvm.rc_stimulus": {
+        "en": "Error originates in the stimulus/transport path → most likely a VERIFICATION-ENV defect "
+              "(sequence/driver/TLM wiring).",
+        "ja": "エラーは stimulus/transport 経路に由来 → 検証環境側の欠陥の可能性が高い"
+              "（sequence/driver/TLM 結線）。"},
+    "uvm.fix_stimulus": {
+        "en": "Inspect the sequence/driver: item generation, response handling, TLM port connections.",
+        "ja": "sequence/driver を点検: アイテム生成、レスポンス処理、TLM ポート接続。"},
+    "uvm.rc_monitor": {
+        "en": "Monitor-side error → check sampling alignment to clock/reset before attributing to the design.",
+        "ja": "モニタ側のエラー → 設計のせいにする前に、クロック/リセットへのサンプリング整合を確認する。"},
+    "uvm.fix_monitor": {
+        "en": "Align monitor sampling (clocking block / @posedge) with the protocol.",
+        "ja": "モニタのサンプリング（clocking block / @posedge）をプロトコルに整合させる。"},
+    "uvm.rc_unknown": {
+        "en": "UVM component error; localize the reporting component to weigh design vs TB.",
+        "ja": "UVM コンポーネントのエラー。報告元コンポーネントを特定し、設計か TB かを判断する。"},
+    "uvm.fix_unknown": {
+        "en": "Identify the reporting component and its data source.",
+        "ja": "報告元コンポーネントとそのデータ源を特定する。"},
+})
 
 _ROLES = [
     ("scoreboard", "scoreboard"), ("sb", "scoreboard"),

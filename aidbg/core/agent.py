@@ -11,7 +11,8 @@ from .registry import SKILLS
 
 
 def run(ctx: Context, inputs: dict[str, str] | None = None) -> Report:
-    import aidbg.skills  # noqa: F401  (import side effect: populates SKILLS)
+    from .registry import discover
+    discover()   # auto-discover built-in + external skills
 
     report = Report(inputs=inputs or {})
     for skill in SKILLS:

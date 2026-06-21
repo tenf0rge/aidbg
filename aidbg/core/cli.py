@@ -76,8 +76,8 @@ def cmd_report(args: argparse.Namespace) -> int:
 
 def cmd_skills(args: argparse.Namespace) -> int:
     """List available skills so an agent/front-end can discover capabilities."""
-    import aidbg.skills  # noqa: F401  (populates the registry)
-    from .registry import SKILLS
+    from .registry import SKILLS, discover
+    discover()
 
     if args.json:
         manifest = [{"name": s.name, "description": s.description,
