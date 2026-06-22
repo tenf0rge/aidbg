@@ -14,6 +14,55 @@ from .repo import Repo
 from .wave import parse_wave
 
 
+_RX_FLIST = re.compile(r"-f\s+(\S+)")
+_RX_TIMESCALE = re.compile(r"-timescale\s+(\S+)")
+_RX_COMPILE = re.compile(r"Compil\w+\s+.*?\(([^)]+)\)")
+_RX_SNAP = re.compile(r"(?:Loading snapshot|snapshot)\s+(\S+)", re.IGNORECASE)
+_RX_TEST = re.compile(r"Running test\s+(\w+)")
+_RX_SEQ = re.compile(r"Starting sequence:?\s*(\S+)")
+_RX_COMP = re.compile(r"\buvm_test_top(?:\.\w+)*")
+
+
+def env(log_path: str) -> dict:
+    """Understand the verification environment from the log: what was loaded
+    (flist/compiled files/snapshot), the test and sequences, and the UVM
+    component hierarchy. This is the 'read the log first' step a human does.
+    """
+    text = Path(log_path).read_text(errors="ignore")
+    flists, compiled, seqs, paths = [], [], [], set()
+    snapshot = test = timescale = None
+    for line in text.splitlines():
+        if (m := _RX_FLIST.search(line)):
+            flists.append(m.group(1))
+        if (m := _RX_TIMESCALE.search(line)):
+            timescale = m.group(1)
+        if (m := _RX_COMPILE.search(line)):
+            compiled.append(m.group(1))
+        if snapshot is None and (m := _RX_SNAP.search(line)):
+            snapshot = m.group(1).rstrip(".")
+        if test is None and (m := _RX_TEST.search(line)):
+            test = m.group(1)
+        if (m := _RX_SEQ.search(line)):
+            seqs.append(m.group(1))
+        for p in _RX_COMP.findall(line):
+            paths.add(p)
+
+    # build the component tree from all dotted paths (+ their prefixes)
+    tree: dict = {}
+    for path in paths:
+        parts = path.split(".")
+        node = tree
+        for part in parts:
+            node = node.setdefault(part, {})
+    return {
+        "tool_inputs": {"flists": sorted(set(flists)), "compiled": compiled,
+                        "snapshot": snapshot, "timescale": timescale},
+        "test": test,
+        "sequences": seqs,
+        "uvm_component_tree": tree,
+    }
+
+
 def signals(wave_path: str) -> list[str]:
     wf = parse_wave(Path(wave_path).read_text())
     return sorted(wf.signals())

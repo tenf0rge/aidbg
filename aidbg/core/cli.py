@@ -89,6 +89,12 @@ def cmd_skills(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_env(args: argparse.Namespace) -> int:
+    from . import primitives
+    print(json.dumps(primitives.env(args.log), ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_query(args: argparse.Namespace) -> int:
     from . import primitives
     print(json.dumps(primitives.query(args.wave, args.signal, args.time),
@@ -140,6 +146,7 @@ Inputs:
 - source repo (optional): {source}
 
 Tool commands (run them in the shell; each prints JSON):
+- understand the environment: {aidbg} env --log {log}
 - failing log events:        {aidbg} grep-log --log {log} --severity ERROR
 - signal value at a time:    {aidbg} query --wave {wave} --signal <NAME> --time <NS>
 - list signals:              {aidbg} signals --wave {wave}
@@ -148,6 +155,10 @@ Tool commands (run them in the shell; each prints JSON):
 - search SV source (regex):  {aidbg} grep-source --source {source} --pattern <REGEX>
 
 Procedure:
+0. FIRST understand the environment: run `env` to see what was loaded (flist /
+   compiled files / snapshot), the test and sequences, and the UVM component
+   tree (driver/monitor/scoreboard/...). Also `signals` to see the DUT interface.
+   Build a mental model of the testbench and the protocol before debugging.
 1. Run grep-log to get the failing events.
 2. For each failure, gather evidence with query / find-driver / blame. For a
    register read mismatch, find when the read actually completes (e.g. pready=1
@@ -252,6 +263,10 @@ def main(argv: list[str] | None = None) -> int:
     au.set_defaults(func=cmd_auto)
 
     # ---- primitives (the tool box an agent calls) ----
+    ev = sub.add_parser("env", help="understand the verification environment from the log (JSON)")
+    ev.add_argument("--log", required=True)
+    ev.set_defaults(func=cmd_env)
+
     q = sub.add_parser("query", help="value of a signal at a time (or all change points)")
     q.add_argument("--wave", required=True)
     q.add_argument("--signal", required=True)

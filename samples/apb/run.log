@@ -1,9 +1,22 @@
 TOOL:	xcelium(64)	24.09-s001: Started on Jun 21, 2026 09:11:00 JST
+xcelium(64): vcs_mx_compat -uvm -timescale 1ns/1ps -f flist.f -l xcelium.log
+Compiling UVM package (uvm_pkg.sv)...
+Compiling design top (tb_top.sv)...
+Elaborating the design hierarchy...
+Building simulation snapshot...
 Loading snapshot worklib.tb_top:sv...
 -------------------------------------------------------------------------------
 Xcelium Simulation Standard Output Log
 -------------------------------------------------------------------------------
 UVM_INFO @ 0: reporter [RNTST] Running test apb_rw_test...
+UVM_INFO /src/uvm_pkg.sv(100) @ 0: uvm_test_top [CFG] Initializing testbench architecture.
+UVM_INFO /src/uvm_pkg.sv(100) @ 0: uvm_test_top.env [CFG] Building environment components.
+UVM_INFO /src/uvm_pkg.sv(100) @ 0: uvm_test_top.env.agt [CFG] Building agent (Active Mode).
+UVM_INFO /src/uvm_pkg.sv(100) @ 0: uvm_test_top.env.agt.sqr [CFG] Sequencer created.
+UVM_INFO /src/uvm_pkg.sv(100) @ 0: uvm_test_top.env.agt.drv [CFG] Driver created.
+UVM_INFO /src/uvm_pkg.sv(100) @ 0: uvm_test_top.env.agt.mon [CFG] Monitor created.
+UVM_INFO /src/uvm_pkg.sv(100) @ 0: uvm_test_top.env.scb [CFG] Scoreboard created.
+UVM_INFO /src/uvm_pkg.sv(100) @ 150: uvm_test_top.env.agt.sqr [SEQ] Starting sequence: seq_burst_write_read
 UVM_INFO /src/uvm_pkg.sv(100) @ 50: uvm_test_top.env.agt.drv [TX_START] Trans 0: Write Addr=32'h0000_1000 Data=32'hA5A5_B6B6
 UVM_INFO /src/uvm_pkg.sv(100) @ 50: uvm_test_top.env.scb [SCB_VAL] Expected Write stored for Addr=32'h0000_1000
 UVM_INFO /src/uvm_pkg.sv(100) @ 70: uvm_test_top.env.agt.drv [TX_START] Trans 1: Write Addr=32'h0000_1004 Data=32'h1234_5678

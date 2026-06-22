@@ -30,9 +30,11 @@ AIDBG_SKILLS_PATH=~/my-org-skills aidbg report --wave … --log …
 **Deterministic** (`aidbg report`) — Python skills parse the inputs and emit a
 ranked report. No LLM, fast, reproducible, CI-friendly.
 
-**Autonomous** (`aidbg auto`) — aidbg drives an LLM agent (opencode) that calls
-aidbg's primitive tools to gather facts and writes the report itself. The LLM
-does the judgement; aidbg gives it precise, queryable access to huge
+**Autonomous** (`aidbg auto`) — aidbg drives an LLM agent (opencode or Claude
+Code) that first reads the log to **understand the environment** (what was
+loaded, the UVM component tree, the test/sequences), then queries the waveform,
+log, and vectors via aidbg's primitive tools and writes the report itself. The
+LLM does the judgement; aidbg gives it precise, queryable access to huge
 waveforms/logs so it never has to ingest them wholesale.
 
 ```bash
@@ -53,6 +55,7 @@ mis-captured) — matching the deterministic skill, with deeper reasoning.
 
 | command | purpose |
 |---|---|
+| `aidbg env --log L` | understand the environment (loaded files, snapshot, test, sequences, UVM component tree) — the "read the log first" step |
 | `aidbg signals --wave W` | list signals |
 | `aidbg query --wave W --signal S [--time N]` | value at a time / all change points |
 | `aidbg grep-log --log L [--severity E] [--pattern RE]` | filter log events (JSON) |

@@ -1,136 +1,89 @@
 # aidbg デバッグレポート
 
 **入力**
-- wave: `samples/wave.txt`
-- netlist: `samples/analog_mux.v`
-- log: `samples/uvm.log`
-- registry: `samples/assertions.json`
-- source: `samples`
-- repo: `/home/yuki/projects/aidbg`
+- wave: `samples/apb/wave.csv`
+- log: `samples/apb/run.log`
 
-**5 件の指摘**（確信度順）。
+**4 件の指摘**（確信度順）。
 
-## 1. AOUT で tranif 競合 → X
-- **レイヤ**: 設計（DESIGN）  ·  **確信度**: 90%  ·  **スキル**: `tranif-contention`
+## 1. 32'h0000_1000 のリードデータ不一致
+- **レイヤ**: 設計（DESIGN）  ·  **確信度**: 85%  ·  **スキル**: `reg-data-mismatch`
 
 **観測されたエラー**
 
-ノード 'AOUT' が t=35ns で X 化。シム/アサーションが多重ドライブの strength 競合を検出。
+scoreboard が 32'h0000_1000 でリードデータ不一致を報告: 期待 32'hA5A5_B6B6、観測 32'hDEAD_DEAD。
 
 **真因（最重要）**
 
-制御 (SEL0, SEL1) が同時にアサートされ、2 個のパスゲートが同時導通。競合するアナログ入力が 'AOUT' で衝突し strength 競合 → X。真因はイネーブルの重なりを許している制御ロジック。
-
-**作り込み元（git blame）**
-
-- コミット `6aa18a403bd4` — tenf0rge（2026-06-20）
-  - Initial commit: aidbg MVP with triage skill and sample scenario
-  - 作り込み箇所: `samples/ctrl.sv:15`
+波形上、32'h0000_1000 のリード時にバスは prdata=deaddead を示しており、scoreboard の観測値と一致・期待値と相違。DUT が誤データを返している → 設計バグ。
 
 **根拠**
 
-- [t=35ns, net=tb.dut.u_mux.AOUT] AOUT が X 化
-- [t=35ns, `samples/analog_mux.v:15`] tranif1 が導通（制御 SEL0=オン）、IN0=St0 を駆動
-- [t=35ns, `samples/analog_mux.v:16`] tranif1 が導通（制御 SEL1=オン）、IN1=St1 を駆動
-- [`samples/ctrl.sv:15`] SEL0 の駆動: sel0 <= 1'b1;
-- [`samples/ctrl.sv:18`] SEL0 の駆動: sel0 <= (chan == 2'd0);
-- [`samples/fixture/bug/ctrl.sv:14`] SEL0 の駆動: sel0 <= 1'b1;
-- [`samples/fixture/bug/ctrl.sv:17`] SEL0 の駆動: sel0 <= (chan == 2'd0);
-- [`samples/fixture/design/rtl/ctrl.sv:12`] SEL0 の駆動: sel0 <= 1'b0;
-- [`samples/fixture/design/rtl/ctrl.sv:15`] SEL0 の駆動: sel0 <= (chan == 2'd0);
-- [`samples/ctrl.sv:16`] SEL1 の駆動: sel1 <= 1'b1;
-- [`samples/ctrl.sv:19`] SEL1 の駆動: sel1 <= (chan == 2'd1);
-- [`samples/fixture/bug/ctrl.sv:15`] SEL1 の駆動: sel1 <= 1'b1;
-- [`samples/fixture/bug/ctrl.sv:18`] SEL1 の駆動: sel1 <= (chan == 2'd1);
-- [`samples/fixture/design/rtl/ctrl.sv:13`] SEL1 の駆動: sel1 <= 1'b0;
-- [`samples/fixture/design/rtl/ctrl.sv:16`] SEL1 の駆動: sel1 <= (chan == 2'd1);
+- [t=95ns, net=tb_top.dut.prdata] scoreboard: 期待 32'hA5A5_B6B6、観測 32'hDEAD_DEAD
+- [t=90ns, net=tb_top.dut.prdata] 32'h0000_1000 リード時のバス prdata=deaddead（t=90ns）
 
 **修正提案（提案のみ・未適用）**
 
-- 対象: `samples/ctrl.sv:15`
-- SEL0, SEL1 を相互排他（one-hot）にする。リセット/デフォルトで全イネーブルを非活性にし、パスゲートが重ならないようにする。
+- 32'h0000_1000 の DUT リードデータ経路／レジスタデコードを点検。
 
 
-## 2. グリッチ 'chk_aout_no_glitch' は実グリッチ（設計）
-- **レイヤ**: 設計（DESIGN）  ·  **確信度**: 80%  ·  **スキル**: `glitch-triage`
+## 2. 32'h0000_1004 のリードデータ不一致
+- **レイヤ**: 検証環境（VERIFICATION-ENV）  ·  **確信度**: 80%  ·  **スキル**: `reg-data-mismatch`
 
 **観測されたエラー**
 
-グリッチチェッカ 'chk_aout_no_glitch' が t=35ns で発火。
+scoreboard が 32'h0000_1004 でリードデータ不一致を報告: 期待 32'h1234_5678、観測 32'hBADC_0DE1。
 
 **真因（最重要）**
 
-t=35ns に 'AOUT' で物理的な競合/X が併発 → 設計起因の実グリッチ（駆動ロジックは tranif-contention の指摘を参照）。
+波形上、32'h0000_1004 のリード時にバスは prdata=12345678（＝期待値）を示している。バスは正しく、scoreboard/monitor 側が取り違え／期待値が誤り → 検証環境バグ。
 
 **根拠**
 
-- [t=35ns] グリッチチェッカ発火
-- [t=35ns, net=AOUT] 共有ノードの競合/X
+- [t=115ns, net=tb_top.dut.prdata] scoreboard: 期待 32'h1234_5678、観測 32'hBADC_0DE1
+- [t=110ns, net=tb_top.dut.prdata] 32'h0000_1004 リード時のバス prdata=12345678（t=110ns）
 
 **修正提案（提案のみ・未適用）**
 
-- 制御ロジックの競合の真因を修正する。グリッチチェッカは実設計欠陥を正しく報告している。
+- monitor のサンプリング点（pready/penable 整合）と scoreboard の期待モデルを確認。
 
 
-## 3. UVM ERROR [NOITEM] @ uvm_test_top.env.agent.seqr
-- **レイヤ**: 検証環境（VERIFICATION-ENV）  ·  **確信度**: 65%  ·  **スキル**: `uvm-env`
+## 3. UVM ERROR [SCB_CMP] @ uvm_test_top.env.scb
+- **レイヤ**: 不明（UNKNOWN）  ·  **確信度**: 40%  ·  **スキル**: `uvm-env`
 
 **観測されたエラー**
 
-response fifo empty（t=95ns）
+MISMATCH for Addr=32'h0000_1000. Expected=32'hA5A5_B6B6 Got=32'hDEAD_DEAD（t=95ns）
 
 **真因（最重要）**
 
-エラーは stimulus/transport 経路に由来 → 検証環境側の欠陥の可能性が高い（sequence/driver/TLM 結線）。
+UVM コンポーネントのエラー。報告元コンポーネントを特定し、設計か TB かを判断する。
 
 **根拠**
 
-- [t=95ns, `./tb/seq/mux_seq.sv:33`] response fifo empty
+- [t=95ns] MISMATCH for Addr=32'h0000_1000. Expected=32'hA5A5_B6B6 Got=32'hDEAD_DEAD
 
 **修正提案（提案のみ・未適用）**
 
-- 対象: `./tb/seq/mux_seq.sv:33`
-- sequence/driver を点検: アイテム生成、レスポンス処理、TLM ポート接続。
+- 報告元コンポーネントとそのデータ源を特定する。
 
 
-## 4. UVM ERROR [MISCMP] @ uvm_test_top.env.sb
-- **レイヤ**: 不明（UNKNOWN）  ·  **確信度**: 45%  ·  **スキル**: `uvm-env`
+## 4. UVM ERROR [SCB_CMP] @ uvm_test_top.env.scb
+- **レイヤ**: 不明（UNKNOWN）  ·  **確信度**: 40%  ·  **スキル**: `uvm-env`
 
 **観測されたエラー**
 
-AOUT mismatch: exp=1 got=x（t=40ns）
+MISMATCH for Addr=32'h0000_1004. Expected=32'h1234_5678 Got=32'hBADC_0DE1（t=115ns）
 
 **真因（最重要）**
 
-チェッカが報告した不一致 — 症状であり真因ではない。期待値と実値を DESIGN 出力まで辿り、別途、参照/期待値そのものの正しさ（TB）も確認する。
+UVM コンポーネントのエラー。報告元コンポーネントを特定し、設計か TB かを判断する。
 
 **根拠**
 
-- [t=40ns, `./tb/env/scoreboard.sv:142`] AOUT mismatch: exp=1 got=x
+- [t=115ns] MISMATCH for Addr=32'h0000_1004. Expected=32'h1234_5678 Got=32'hBADC_0DE1
 
 **修正提案（提案のみ・未適用）**
 
-- 対象: `./tb/env/scoreboard.sv:142`
-- 不一致時刻で DUT 出力と参照モデルを突き合わせ、予測器（predictor）を検証する。
-
-
-## 5. UVM FATAL [TLM] @ uvm_test_top.env.sb
-- **レイヤ**: 不明（UNKNOWN）  ·  **確信度**: 45%  ·  **スキル**: `uvm-env`
-
-**観測されたエラー**
-
-null transaction handle（t=100ns）
-
-**真因（最重要）**
-
-チェッカが報告した不一致 — 症状であり真因ではない。期待値と実値を DESIGN 出力まで辿り、別途、参照/期待値そのものの正しさ（TB）も確認する。
-
-**根拠**
-
-- [t=100ns, `./tb/env/scoreboard.sv:150`] null transaction handle
-
-**修正提案（提案のみ・未適用）**
-
-- 対象: `./tb/env/scoreboard.sv:150`
-- 不一致時刻で DUT 出力と参照モデルを突き合わせ、予測器（predictor）を検証する。
+- 報告元コンポーネントとそのデータ源を特定する。
 

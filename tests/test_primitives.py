@@ -34,6 +34,17 @@ def test_grep_log_pattern():
     assert hits and all("1004" in h["text"] for h in hits)
 
 
+def test_env_understands_the_testbench():
+    e = primitives.env(str(APB / "run.log"))
+    assert e["test"] == "apb_rw_test"
+    assert "tb_top.sv" in e["tool_inputs"]["compiled"]
+    assert e["tool_inputs"]["timescale"] == "1ns/1ps"
+    assert "seq_burst_write_read" in e["sequences"]
+    env_tree = e["uvm_component_tree"]["uvm_test_top"]["env"]
+    assert "scb" in env_tree
+    assert {"drv", "mon", "sqr"} <= set(env_tree["agt"].keys())
+
+
 def test_grep_source_finds_assertion_definition():
     # lets an agent read an assertion's intent by name — no registry needed
     hits = primitives.grep_source(str(ROOT / "samples" / "fixture" / "design"),
