@@ -109,6 +109,13 @@ def cmd_grep_log(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_grep_source(args: argparse.Namespace) -> int:
+    from . import primitives
+    print(json.dumps(primitives.grep_source(args.source, args.pattern),
+                     ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_blame(args: argparse.Namespace) -> int:
     from . import primitives
     print(json.dumps(primitives.blame(args.source, args.file, args.line),
@@ -138,6 +145,7 @@ Tool commands (run them in the shell; each prints JSON):
 - list signals:              {aidbg} signals --wave {wave}
 - blame a source line:       {aidbg} blame --source {source} --file <F> --line <N>
 - where a signal is driven:  {aidbg} find-driver --source {source} --signal <NAME>
+- search SV source (regex):  {aidbg} grep-source --source {source} --pattern <REGEX>
 
 Procedure:
 1. Run grep-log to get the failing events.
@@ -145,7 +153,14 @@ Procedure:
    register read mismatch, find when the read actually completes (e.g. pready=1
    and pwrite=0 for that address) and query the data bus AT THAT cycle to decide
    DESIGN (bus carried wrong data) vs VERIFICATION-ENV (bus was right).
-3. Decide the root cause layer: DESIGN or VERIFICATION-ENV, justified by evidence.
+3. For a failed ASSERTION, infer its intent yourself — do NOT rely on any config.
+   Read its definition (grep-source for the assertion name) and judge from the
+   name/message whether it is a GLITCH checker (firing means a glitch was seen)
+   or a normal spec check. For a glitch checker, decide real (DESIGN: a physical
+   contention/X on the relevant net at that time) vs sim-artifact
+   (VERIFICATION-ENV: no physical cause near the firing time — suspect a 0-delay
+   race / delta-cycle ordering).
+4. Decide the root cause layer: DESIGN or VERIFICATION-ENV, justified by evidence.
 
 The report (Markdown) must contain, per finding: the error, git attribution if
 any, the ROOT CAUSE (most important), and a suggested fix (proposal only — never
@@ -252,6 +267,11 @@ def main(argv: list[str] | None = None) -> int:
     gl.add_argument("--severity")
     gl.add_argument("--pattern")
     gl.set_defaults(func=cmd_grep_log)
+
+    gs = sub.add_parser("grep-source", help="search SV source for a regex (JSON)")
+    gs.add_argument("--source", required=True)
+    gs.add_argument("--pattern", required=True)
+    gs.set_defaults(func=cmd_grep_source)
 
     bl = sub.add_parser("blame", help="git blame a source line (JSON)")
     bl.add_argument("--source", required=True)

@@ -51,6 +51,24 @@ def grep_log(log_path: str, severity: str | None = None,
     return out
 
 
+def grep_source(source: str, pattern: str) -> list[dict]:
+    """Search SV/Verilog source under `source` for a regex. Lets an agent read an
+    assertion (or any) definition by name to infer its intent — no config needed."""
+    rx = re.compile(pattern)
+    out = []
+    for f in Path(source).rglob("*"):
+        if f.suffix not in (".sv", ".v", ".svh"):
+            continue
+        try:
+            lines = f.read_text(errors="ignore").splitlines()
+        except OSError:
+            continue
+        for i, line in enumerate(lines, 1):
+            if rx.search(line):
+                out.append({"file": str(f), "line": i, "text": line.strip()})
+    return out
+
+
 def blame(source: str, file: str, line: int) -> dict | None:
     repo = Repo.discover(Path(source))
     if not repo:

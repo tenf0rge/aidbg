@@ -3,7 +3,8 @@ from pathlib import Path
 
 from aidbg.core import primitives
 
-APB = Path(__file__).resolve().parents[1] / "samples" / "apb"
+ROOT = Path(__file__).resolve().parents[1]
+APB = ROOT / "samples" / "apb"
 
 
 def test_signals_lists_bus_basenames():
@@ -31,3 +32,11 @@ def test_grep_log_filters_errors():
 def test_grep_log_pattern():
     hits = primitives.grep_log(str(APB / "run.log"), pattern="1004")
     assert hits and all("1004" in h["text"] for h in hits)
+
+
+def test_grep_source_finds_assertion_definition():
+    # lets an agent read an assertion's intent by name — no registry needed
+    hits = primitives.grep_source(str(ROOT / "samples" / "fixture" / "design"),
+                                  "chk_aout_no_glitch")
+    assert hits and any("chk_aout_no_glitch" in h["text"] for h in hits)
+    assert all(h["file"].endswith((".sv", ".v", ".svh")) for h in hits)
