@@ -27,23 +27,112 @@ queries, read this evidence, here's a worked example, decide design vs TB" — n
 code. To target a new kind of verification you write a playbook and a profile;
 the toolbox and the core don't change.
 
-## Run
+---
+
+# Getting started
+
+## 1. Prerequisites（まず準備するもの）
+
+| 必須 | 用途 |
+|---|---|
+| **Python 3.10+** | toolbox は標準ライブラリのみ（実行時依存ゼロ） |
+| **git** | `blame` / `find-driver` の attribution（「誰のどのコミット」）に必要 |
+| **LLM エンジン**（`aidbg auto` を使うとき） | 判断を行う本体。下のどちらか |
+
+LLM エンジンは2択（`--engine` で切替）:
+
+- **opencode**（無料・ログイン不要、同梱の無料モデル）
+  ```bash
+  curl -fsSL https://opencode.ai/install | bash      # → ~/.opencode/bin/opencode
+  ```
+- **claude**（高品質・Claude Code CLI、自分の Claude 利用枠を消費）
+  ```bash
+  # 既に Claude Code CLI（~/.local/bin/claude）が認証済みであること
+  ```
+
+primitives（`env`/`query`/`blame` など）だけなら LLM エンジンは不要です。
+
+## 2. Install
 
 ```bash
-# pick a profile; it loads its skill playbooks and drives an LLM engine
-aidbg auto --profile apb-uvm \
-  --wave samples/apb/wave.csv --log samples/apb/run.log --lang ja
-
-# free, no login (bundled free model)
-aidbg auto --profile mixed-signal --engine opencode --wave … --log … --source …
-# higher quality (uses your Claude Code quota)
-aidbg auto --profile apb-uvm --engine claude --wave … --log …
+git clone git@github.com:tenf0rge/aidbg.git
+cd aidbg
+python -m venv .venv && . .venv/bin/activate      # 任意
+pip install -e .                                   # `aidbg` コマンドが有効に
+# インストールせず `python -m aidbg ...` でも動く
 ```
 
-`--engine` switches the LLM driver: **opencode** (free models, no API key) or
-**claude** (Claude Code CLI). `aidbg profiles` lists what's available.
+## 3. 入力として用意するもの（3つ、すべて read-only で渡すだけ）
 
-### The primitive tool box (what the agent calls — Layer 1)
+| 入力 | 形式 | 例 |
+|---|---|---|
+| **waveform** `--wave` | テキスト。CSVテーブル（`Time(ns),sig,sig[31:0],…` バスはhex、FSDB→CSVエクスポート）か、イベントリスト（`time scope.signal value(strength)`、混合信号向け）。**自動判別** | `samples/apb/wave.csv` |
+| **log** `--log` | Xcelium / UVM ログ（`UVM_ERROR … @ N: comp [ID] msg` や SVA 失敗、`*W/E/F`） | `samples/apb/run.log` |
+| **source** `--source`（任意） | 設計/TB の **git リポジトリのルート**。指定すると blame で「誰のどのコミット」まで辿れる | `samples/fixture/design` |
+
+最低1つ（普通は wave か log）あれば動きます。波形は巨大でも OK——aidbg が変化点に圧縮し、エージェントは丸読みせず**問い合わせ**で事実を取ります。
+
+## 4. まず動かす（同梱サンプルで30秒）
+
+```bash
+# どんな profile があるか
+aidbg profiles
+#   apb-uvm
+#   mixed-signal
+
+# デジタル: APBレジスタ read 不一致を 設計 vs TB に切り分け（無料エンジン・日本語）
+aidbg auto --profile apb-uvm --engine opencode \
+  --wave samples/apb/wave.csv --log samples/apb/run.log --lang ja
+
+# ミックスドシグナル: tranif 競合 → X を git blame 付きで（source も渡す）
+aidbg auto --profile mixed-signal --engine opencode \
+  --wave samples/fixture/sim/wave.txt --log samples/fixture/sim/uvm.log \
+  --source samples/fixture/design --lang ja
+```
+
+`--out report.md` でファイル出力、`--engine claude` で高品質（枠消費）。
+
+## 5. サンプルが示すこと（何を検証できるか）
+
+| サンプル | 何のデモ | 期待される結論 |
+|---|---|---|
+| `samples/apb/` | 実フォーマット（CSV波形＋Xcelium UVMログ）。SCB不一致2件 | 0x1000=**DESIGN**（バスが誤データ）/ 0x1004=**VERIFICATION-ENV**（バス正・TB取り違え） |
+| `samples/fixture/` | **既知コミットにバグを仕込んだ git fixture**（Alice正常→Bob Hotfix）。`build_fixture.sh` で再構築 | tranif 競合→X を **Bob Hotfix / rtl/ctrl.sv:14** に attribution |
+| `samples/scenario_tb/` | 検証環境側が真因のケース | グリッチが sim-artifact（**VERIFICATION-ENV**）と判定 |
+
+primitives を直接叩いて事実だけ見ることもできます:
+
+```bash
+aidbg env       --log  samples/apb/run.log                       # 環境理解（まずこれ）
+aidbg grep-log  --log  samples/apb/run.log --severity ERROR      # 失敗イベント
+aidbg query     --wave samples/apb/wave.csv --signal prdata --time 110
+aidbg blame     --source samples/fixture/design --file rtl/ctrl.sv --line 14
+```
+
+## 6. 自分の検証に合わせる（profile と skill を書く）
+
+新しい検証ドメインを足す＝**ファイルを置くだけ**。toolbox もコアも触りません。
+
+1. **手順書を書く** `skills/<name>.md` — 方法＋実例（「このクエリを叩け／この証拠で設計かTBか決めろ」）。
+2. **profile を書く** `profiles/<name>/AGENTS.md` — ペルソナ・read-only規約・レポート様式（①エラー→②誰のコミット→③真因→④修正案）と、**使う手順書と使いどころ**:
+   ```markdown
+   ## 使う手順書と使いどころ
+   - レジスタ read 不一致が出たら → skills/reg-data-mismatch.md
+   - UVM ERROR の発報元を切り分けたいとき → skills/uvm-env.md
+   ```
+   AGENTS.md が `skills/<name>.md` と参照した手順書だけがロードされます（全ロードではない＝profile が戦場のスキルを明示選択）。
+3. **実行** `aidbg auto --profile <name> …`
+
+リポジトリ外に置くなら環境変数で:
+
+```bash
+AIDBG_PROFILES_PATH=~/my-org/profiles AIDBG_SKILLS_PATH=~/my-org \
+  aidbg auto --profile my-custom --wave … --log …
+```
+
+---
+
+## The primitive tool box (what the agent calls — Layer 1)
 
 | command | purpose |
 |---|---|
@@ -57,26 +146,12 @@ aidbg auto --profile apb-uvm --engine claude --wave … --log …
 
 Deterministic, stdlib-only, JSON out — usable by any agent or a human directly.
 
-## Profiles and skills
-
-A **profile** (`profiles/<name>/AGENTS.md`) is the swappable battlefield. It
-states the read-only rules and report order, and lists the playbooks to load:
-
-```markdown
-## 読み込む手順書（skills）
-- skills/reg-data-mismatch.md
-- skills/uvm-env.md
-```
-
-Bundled profiles:
+## Bundled profiles
 
 - **mixed-signal** — tranif pass-gate contention → X, glitch real-vs-artifact,
   UVM triage. (skills: tranif-contention, glitch-triage, uvm-env)
 - **apb-uvm** — APB register read mismatch split into DUT vs TB bug by reading
   the real bus `prdata`. (skills: reg-data-mismatch, uvm-env)
-
-External profiles/skills are first-class: put them on `AIDBG_PROFILES_PATH` /
-`AIDBG_SKILLS_PATH` and they're found without touching this repo.
 
 ## Principles
 
@@ -103,11 +178,9 @@ samples/                    runnable scenarios + a git fixture (planted bug)
 tests/                      toolbox + launcher + fixture-attribution tests
 ```
 
-## Samples
+## Develop
 
-- `samples/fixture/` — a git history fixture that plants a bug at a known commit
-  (Alice = good, Bob Hotfix = the bug at `rtl/ctrl.sv:14`). Ground truth for the
-  "who/which commit" attribution (`tests/test_fixture_attribution.py`).
-- `samples/apb/` — real-format APB scenario: CSV waveform + Xcelium UVM log with
-  two scoreboard mismatches that are actually one DUT bug + one TB bug.
-- `samples/scenario_tb/` — a verification-env root cause (sim-artifact glitch).
+```bash
+pip install -e ".[dev]"
+pytest                       # toolbox + launcher + fixture attribution (read-only verified)
+```
