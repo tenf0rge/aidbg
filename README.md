@@ -1,5 +1,8 @@
 # aidbg
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)
+
 Autonomous debug assistant for SoC verification. From SVA/UVM failures, it
 works out the **root cause** and — most importantly — whether the defect is on
 the **design (RTL/netlist)** side or the **verification-environment (UVM/TB)**
@@ -184,3 +187,7 @@ tests/                      toolbox + launcher + fixture-attribution tests
 pip install -e ".[dev]"
 pytest                       # toolbox + launcher + fixture attribution (read-only verified)
 ```
+
+## License
+
+[MIT](LICENSE). The bundled samples are synthetic (no proprietary design data).
