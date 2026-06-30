@@ -7,4 +7,5 @@ __pycache__/
 build/
 dist/
 err.txt
+.env
 .DS_Store

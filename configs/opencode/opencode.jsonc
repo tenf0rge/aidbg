@@ -1,0 +1,80 @@
+{
+  // aidbg engine config for opencode. Defines a COMMON base (model + provider/API)
+  // and THREE permission tiers as agents, selected at runtime via `opencode run
+  // --agent <name>` (aidbg passes this through `aidbg auto --mode <name>`).
+  //
+  // Philosophy: aidbg gives the agent a real shell (flexibility), and restricts
+  // what it may do via opencode's permission system "as much as config allows".
+  // NOTE: a shell allow-list is best-effort, not airtight — a model could chain a
+  // destructive command onto an allowed one. The hard guarantee that aidbg never
+  // edits the DUT/TB still rests on: (a) aidbg's own primitives being read-only,
+  // and (b) you running the engine against a source tree you can restore from git.
+  "$schema": "https://opencode.ai/config.json",
+
+  // ---- COMMON: model + provider (API) ----
+  "model": "opencode/north-mini-code-free",
+
+  // LiteLLM (OpenAI-compatible proxy) as a custom provider — OPT-IN.
+  // Uncomment this block and set LITELLM_BASE_URL / LITELLM_API_KEY (see
+  // .env.example), then run with `--model litellm/<your-model>`. Leave it
+  // commented to use the bundled free model above with no key. (Enabling it with
+  // the env unset makes opencode fail to register the provider, so it is opt-in.)
+  //
+  // "provider": {
+  //   "litellm": {
+  //     "npm": "@ai-sdk/openai-compatible",
+  //     "name": "LiteLLM",
+  //     "options": {
+  //       "baseURL": "{env:LITELLM_BASE_URL}",
+  //       "apiKey": "{env:LITELLM_API_KEY}"
+  //     },
+  //     "models": { "gpt-4o": {}, "claude-3-5-sonnet": {} }
+  //   }
+  // },
+
+  // Default (when no --agent given): most restrictive.
+  "permission": { "edit": "deny", "bash": "deny", "webfetch": "deny", "websearch": "deny" },
+
+  "agent": {
+    // (1) read-only — aidbg's debug path uses this. Only aidbg primitives and a
+    // handful of read commands; no edits except writing the report file.
+    "readonly": {
+      "description": "read-only over the DUT/TB: the source lives outside the run dir and external_directory:deny blocks opencode's file tools from reaching it; network denied; shell allowed (so aidbg runs) but destructive verbs blocked. The agent may only write its report inside the throwaway run dir.",
+      "mode": "primary",
+      "permission": {
+        "edit": "allow",
+        "external_directory": "deny",
+        "webfetch": "deny",
+        "websearch": "deny",
+        // Shell stays available (so the agent can run aidbg + explore), but the
+        // obviously destructive verbs are denied. Best-effort, not airtight — a
+        // model could still chain a write via other means; the hard guarantee is
+        // that aidbg's own primitives are read-only and you run against git.
+        "bash": {
+          "rm *": "deny", "rm -rf*": "deny", "rmdir *": "deny", "mv *": "deny",
+          "dd *": "deny", "truncate *": "deny", "shred *": "deny", "tee *": "deny",
+          "* > *": "deny", "* >> *": "deny",
+          "git push*": "deny", "git commit*": "deny", "git reset*": "deny",
+          "git clean*": "deny", "git checkout*": "deny", "git restore*": "deny",
+          "*": "allow"
+        }
+      }
+    },
+
+    // (2) safe-edit — edits and arbitrary commands require confirmation. In headless
+    // `opencode run` there is no TTY to confirm, so "ask" effectively blocks them;
+    // use this interactively when you want a human in the loop.
+    "safe-edit": {
+      "description": "edits/commands require confirmation (human-in-the-loop)",
+      "mode": "primary",
+      "permission": { "edit": "ask", "bash": "ask", "webfetch": "ask", "websearch": "deny" }
+    },
+
+    // (3) edit — full freedom: edits and commands allowed, no guardrails.
+    "edit": {
+      "description": "full edit/exec — no guardrails (use deliberately)",
+      "mode": "primary",
+      "permission": { "edit": "allow", "bash": "allow", "webfetch": "allow", "websearch": "allow" }
+    }
+  }
+}

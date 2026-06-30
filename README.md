@@ -156,6 +156,35 @@ Deterministic, stdlib-only, JSON out — usable by any agent or a human directly
 - **apb-uvm** — APB register read mismatch split into DUT vs TB bug by reading
   the real bus `prdata`. (skills: reg-data-mismatch, uvm-env)
 
+## Engine permission tiers (`--mode`)
+
+`aidbg auto` runs the engine under a permission tier defined in
+`configs/opencode/opencode.jsonc` (as opencode `agent`s) and chosen with `--mode`:
+
+| `--mode` | edit | network | shell | use |
+|---|---|---|---|---|
+| `readonly` (default) | denied | denied | allowed; destructive verbs blocked | aidbg's debug path |
+| `safe-edit` | ask | ask | ask | human-in-the-loop |
+| `edit` | allowed | allowed | allowed | full freedom (deliberate) |
+
+Read-only is enforced at the **engine**, not just the prompt: the source repo
+lives outside the throwaway run dir, and `external_directory: deny` stops the
+engine's file tools from reaching it; `webfetch`/`websearch` are denied. **Honest
+caveat:** the shell stays available (so the agent can call the aidbg primitives),
+and a shell allow/deny-list is best-effort — a model *could* chain a write past
+it. The hard guarantee that aidbg never edits your DUT/TB rests on (a) aidbg's
+primitives being read-only and (b) running against a git tree you can restore.
+For the claude engine, `--mode readonly` passes only `--allowedTools Bash`;
+relaxed modes add `Edit`/`Write`.
+
+### LiteLLM / API keys (common config)
+
+The engine config carries a commented **LiteLLM** (OpenAI-compatible proxy)
+provider block. Uncomment it and set `LITELLM_BASE_URL` / `LITELLM_API_KEY` (see
+[.env.example](.env.example)) to route through your own models — keys come from
+the environment, so none live in the repo. The bundled free opencode model needs
+no key, so the default flow works out of the box.
+
 ## Principles
 
 - **The toolbox holds no debug knowledge.** It is read-only data access. The

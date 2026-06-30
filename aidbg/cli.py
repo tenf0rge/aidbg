@@ -25,7 +25,7 @@ def cmd_auto(args: argparse.Namespace) -> int:
     return launcher.run(
         engine=args.engine, profile=args.profile, wave=args.wave, log=args.log,
         source=args.source, lang=args.lang, model=args.model,
-        timeout=args.timeout, out=args.out)
+        timeout=args.timeout, out=args.out, mode=args.mode)
 
 
 def cmd_profiles(args: argparse.Namespace) -> int:
@@ -63,6 +63,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="profile name (profiles/<name>/AGENTS.md), a dir, or an AGENTS.md path")
     au.add_argument("--engine", choices=("opencode", "claude"), default="opencode",
                     help="LLM engine: opencode (free) or claude (Claude Code, uses your quota)")
+    au.add_argument("--mode", choices=("readonly", "safe-edit", "edit"), default="readonly",
+                    help="permission tier enforced on the engine (default: readonly; "
+                         "safe-edit/edit relax the read-only guarantee)")
     au.add_argument("--wave")
     au.add_argument("--log")
     au.add_argument("--source")
