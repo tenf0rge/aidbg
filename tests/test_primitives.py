@@ -1,7 +1,7 @@
-"""Tests for the deterministic primitive tool box (the agent-callable layer)."""
+"""Tests for the deterministic primitive tool box (Layer 1, agent-callable)."""
 from pathlib import Path
 
-from aidbg.core import primitives
+from aidbg.toolbox import primitives
 
 ROOT = Path(__file__).resolve().parents[1]
 APB = ROOT / "samples" / "apb"

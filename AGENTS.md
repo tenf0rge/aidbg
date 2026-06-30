@@ -1,58 +1,20 @@
-# Agent guide for aidbg
+# aidbg — agent guide
 
-aidbg is an **autonomous debug assistant** for mixed-signal SoC verification.
-An AI agent (e.g. opencode) drives it; aidbg supplies the debug *skills* and a
-*report*. This file tells the agent how to operate it.
+aidbg is a read-only debug assistant. **You never edit, create, or delete any
+design/TB source file.** You only run the read-only `aidbg` primitives and emit
+one report.
 
-## Hard rules
+This file is the generic note. The *operative* instructions for a run come from
+the **profile** you are launched with (`profiles/<name>/AGENTS.md`), which sets
+the persona, the read-only rules, the report format, and the skill playbooks to
+load. See `aidbg profiles` for the list and `README.md` for the architecture.
 
-1. **Never edit the design or testbench source.** aidbg is read-only over the
-   DUT/TB repository. Fix suggestions are *proposals* for a human; the agent
-   must not apply them.
-2. **The deliverable is the report**, nothing else. Do not open PRs or modify
-   files in the target repo.
+## The contract
 
-## Capabilities
-
-Discover skills (machine-readable):
-
-```bash
-aidbg skills --json
-```
-
-Each skill declares what it `consumes` (`wave`, `netlist`, `log`, `source`,
-`git`) and produces `Finding`s.
-
-## Running a debug pass
-
-```bash
-aidbg report \
-  --wave   <fsdb-text-export> \
-  --netlist <extracted-netlist.v> \
-  --log     <xcelium-or-uvm.log> \
-  --registry <assertions.json> \
-  --source  <design/TB repo root> \
-  --json report.json --out report.md
-```
-
-`--source` enables git blame so the report can name the commit/author that
-introduced the defect. The JSON output is the agent's primary input.
-
-## Report contract (per finding)
-
-- `error` — what was observed
-- `attribution` — commit / author / date / `file:line` (git blame), when found
-- `root_cause` — **the most important field**
-- `fix` — a proposal, never applied
-- `layer` — `design` | `verification-env` | `unknown`
-- `confidence` — 0..1 (findings are ranked by this)
-
-## Suggested agent loop
-
-1. `aidbg skills --json` → know what can be detected.
-2. Collect the run's wave/log/netlist/source paths.
-3. `aidbg report --json` → read findings.
-4. If a glitch checker fired, check whether `glitch-triage` rated it
-   `design` (real) or `verification-env` (sim-artifact) and explain why.
-5. Summarize for the human: error → attribution → root cause → proposed fix.
-   Do **not** edit anything.
+- Use only the aidbg tool box: `env`, `signals`, `query`, `grep-log`,
+  `grep-source`, `find-driver`, `blame`. They are deterministic and JSON-out.
+- Read the log first (`env`) to understand the environment before debugging.
+- Back every root-cause claim with a query result. Never blame `uvm_pkg.sv`
+  (it is a macro location, not the real source).
+- The report answers, in order: ① what error → ② which commit/author (git
+  blame) → ③ **root cause (most important)** → ④ suggested fix (proposal only).

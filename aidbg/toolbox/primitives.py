@@ -1,8 +1,8 @@
-"""Deterministic primitives — the tool box an LLM agent (opencode) calls.
+"""Deterministic primitives — the tool box an LLM agent calls.
 
 These let an agent *query* facts precisely without ingesting a huge waveform or
 log into its context. Each returns plain JSON-able data. No judgement here; the
-agent (or a skill) does the reasoning.
+agent (guided by a profile + skill playbooks) does the reasoning. Read-only.
 """
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .logs import parse_log
 from .repo import Repo
+from .source import find_assignments
 from .wave import parse_wave
 
 
@@ -50,9 +51,8 @@ def env(log_path: str) -> dict:
     # build the component tree from all dotted paths (+ their prefixes)
     tree: dict = {}
     for path in paths:
-        parts = path.split(".")
         node = tree
-        for part in parts:
+        for part in path.split("."):
             node = node.setdefault(part, {})
     return {
         "tool_inputs": {"flists": sorted(set(flists)), "compiled": compiled,
@@ -131,11 +131,10 @@ def blame(source: str, file: str, line: int) -> dict | None:
 
 def find_driver(source: str, signal: str) -> list[dict]:
     """Where a signal is driven in the SV source (+ git blame per site)."""
-    from .context import Context
-    ctx = Context(source_root=Path(source), repo=Repo.discover(Path(source)))
+    repo = Repo.discover(Path(source))
     out = []
-    for f, ln, txt in ctx.find_assignments(signal):
-        b = ctx.blame(f, ln)
+    for f, ln, txt in find_assignments(Path(source), signal):
+        b = repo.blame(f, ln) if repo else None
         out.append({"file": f, "line": ln, "text": txt,
                     "commit": b.commit if b else None,
                     "author": b.author if b else None})
